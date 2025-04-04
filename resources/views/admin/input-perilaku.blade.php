@@ -77,9 +77,10 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">Administrator (Default)</option>
                                 @foreach($gurus as $guru)
-                                    <option value="{{ $guru->id }}" {{ old('id_guru') == $guru->id ? 'selected' : '' }}>
-                                        {{ $guru->nama }}
-                                    </option>
+                                <option value="{{ $guru->id_guru }}" {{ old('id_guru') == $guru->id_guru ? 'selected' : '' }}>
+    {{ $guru->nama }}
+</option>
+
                                 @endforeach
                             </select>
                         </div>

@@ -22,7 +22,7 @@ class SiswaController extends Controller
             abort(403, 'Data siswa tidak ditemukan');
         }
 
-        $perilaku = Perilaku::with(['kategoriPerilaku', 'guru.user'])
+        $perilaku = Perilaku::with(['kategori', 'guru.user'])
             ->where('id_siswa', $siswa->id_siswa)
             ->latest()
             ->take(5)
@@ -39,30 +39,21 @@ class SiswaController extends Controller
     {
         $siswa = auth()->user()->siswa;
 
-        if (!$siswa) {
-            abort(403, 'Data siswa tidak ditemukan');
-        }
-
-        $query = Perilaku::with(['kategoriPerilaku', 'guru.user'])
+        $query = Perilaku::with(['kategori', 'guru.user'])
             ->where('id_siswa', $siswa->id_siswa);
 
         switch (request('sort')) {
             case 'terlama':
                 $query->oldest();
                 break;
-
             case 'poin_tertinggi':
-                $query->with('kategoriPerilaku')
-                      ->get()
-                      ->sortByDesc(fn($item) => $item->kategoriPerilaku->poin ?? 0);
+                $query->join('kategori_perilaku', 'perilaku.kategori_perilaku_id', '=', 'kategori_perilaku.id')
+                    ->orderBy('kategori_perilaku.poin', 'desc');
                 break;
-
             case 'poin_terendah':
-                $query->with('kategoriPerilaku')
-                      ->get()
-                      ->sortBy(fn($item) => $item->kategoriPerilaku->poin ?? 0);
+                $query->join('kategori_perilaku', 'perilaku.kategori_perilaku_id', '=', 'kategori_perilaku.id')
+                    ->orderBy('kategori_perilaku.poin', 'asc');
                 break;
-
             default:
                 $query->latest();
         }
@@ -79,11 +70,6 @@ class SiswaController extends Controller
         ]);
 
         $laporan = LaporanPerilaku::findOrFail($id_laporan);
-
-        if ($laporan->id_siswa !== auth()->user()->siswa->id_siswa) {
-            abort(403, 'Anda tidak berhak mengomentari laporan ini.');
-        }
-
         $laporan->update(['komentar_siswa' => $request->komentar]);
 
         return back()->with('success', 'Komentar berhasil disimpan');

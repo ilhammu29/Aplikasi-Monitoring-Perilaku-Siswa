@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Siswa;
+use App\Models\Guru;
 use App\Models\OrangTua;
 use App\Models\KategoriPerilaku;
 use App\Models\Perilaku;
@@ -29,50 +30,52 @@ class AdminController extends Controller
     }
 
     public function tambahPengguna(Request $request)
-    {
-        // Validasi umum
-        $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:users',
-            'nama' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:6',
-            'role' => 'required|in:admin,dosen,siswa',
+{
+    // Validasi umum
+    $validated = $request->validate([
+        'username' => 'required|string|max:255|unique:users',
+        'nama' => 'required|string|max:255',
+        'email' => 'required|email|unique:users',
+        'password' => 'required|string|min:6',
+        'role' => 'required|in:admin,guru,siswa,orang_tua',
+    ]);
+
+    // Validasi tambahan hanya untuk siswa
+    if ($request->role === 'siswa') {
+        $siswaData = $request->validate([
+            'nomor_induk' => 'required|unique:siswa,nomor_induk',
+            'kelas' => 'required|string|max:50',
+            'jurusan' => 'required|string|max:100',
         ]);
-    
-        // Tambahan validasi untuk siswa
-        if ($request->role === 'siswa') {
-            $request->validate([
-                'nomor_induk' => 'required|unique:siswa,nomor_induk',
-                'kelas' => 'required|string|max:50',
-                'jurusan' => 'required|string|max:100',
-            ]);
-        }
-    
-        // Buat user baru
-        $user = User::create([
-            'username' => $validated['username'],
-            'nama' => $validated['nama'],
-            'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
-            'role' => $validated['role'],
-        ]);
-    
-        // Kalau siswa, buat data tambahan ke tabel siswa
-        if ($user->role === 'siswa') {
-            Siswa::create([
-                'id_user' => $user->id,
-                'nomor_induk' => $request->nomor_induk,
-                'kelas' => $request->kelas,
-                'jurusan' => $request->jurusan,
-                'poin' => 100,
-            ]);
-        }
-    
-        return redirect()->back()->with('success', 'Pengguna berhasil ditambahkan.');
     }
+
+    // Simpan user
+    $user = User::create([
+        'username' => $validated['username'],
+        'nama' => $validated['nama'],
+        'email' => $validated['email'],
+        'password' => bcrypt($validated['password']),
+        'role' => $validated['role'],
+    ]);
+
+    // Simpan data siswa jika role-nya siswa
+    if ($user->role === 'siswa') {
+        Siswa::create([
+            'id_user' => $user->id,
+            'nomor_induk' => $siswaData['nomor_induk'],
+            'kelas' => $siswaData['kelas'],
+            'jurusan' => $siswaData['jurusan'],
+            'poin' => 100,
+        ]);
+    }
+
+    return redirect()->back()->with('success', 'Pengguna berhasil ditambahkan.');
+}
+
     
 
-    public function editPengguna(Request $request, $id)
+
+public function editPengguna(Request $request, $id)
 {
     $user = User::findOrFail($id);
 
@@ -87,43 +90,90 @@ class AdminController extends Controller
     // Update data user
     $user->update($validated);
 
-    // Kalau role-nya siswa, validasi dan update juga data siswa-nya
-    if ($request->role === 'siswa') {
-        $request->validate([
-            'nomor_induk' => [
-                'required',
-                Rule::unique('siswa', 'nomor_induk')->ignore($user->id, 'id_user'),
-            ],
-            'kelas' => 'required|string|max:50',
-            'jurusan' => 'required|string|max:100',
-        ]);
-        
-        // Kalau data siswa-nya belum ada (jaga-jaga), kita buat
-        if (!$user->siswa) {
-            $user->siswa()->create([
-                'nomor_induk' => $request->nomor_induk,
-                'kelas' => $request->kelas,
-                'jurusan' => $request->jurusan,
-                'poin' => 100,
+    // Handle masing-masing role
+    switch ($request->role) {
+        case 'siswa':
+            $request->validate([
+                'nomor_induk' => [
+                    'required',
+                    Rule::unique('siswa', 'nomor_induk')->ignore($user->id, 'id_user'),
+                ],
+                'kelas' => 'required|string|max:50',
+                'jurusan' => 'required|string|max:100',
             ]);
-        } else {
-            // Kalau udah ada, kita update
-            $user->siswa->update([
-                'nomor_induk' => $request->nomor_induk,
-                'kelas' => $request->kelas,
-                'jurusan' => $request->jurusan,
-            ]);
-        }
 
-    } else {
-        // Kalau role-nya bukan siswa dan data siswa-nya ada, hapus aja
-        if ($user->siswa) {
-            $user->siswa()->delete();
-        }
+            if (!$user->siswa) {
+                $user->siswa()->create([
+                    'nomor_induk' => $request->nomor_induk,
+                    'kelas' => $request->kelas,
+                    'jurusan' => $request->jurusan,
+                    'poin' => 100,
+                ]);
+            } else {
+                $user->siswa->update([
+                    'nomor_induk' => $request->nomor_induk,
+                    'kelas' => $request->kelas,
+                    'jurusan' => $request->jurusan,
+                ]);
+            }
+
+            // Hapus data guru/ortu jika ada
+            $user->guru()?->delete();
+            $user->orangTua()?->delete();
+            break;
+
+        case 'guru':
+            $request->validate([
+                'nip' => [
+                    'required',
+                    Rule::unique('guru', 'nip')->ignore($user->id, 'id_user'),
+                ],
+            ]);
+
+            if (!$user->guru) {
+                $user->guru()->create([
+                    'nip' => $request->nip,
+                ]);
+            } else {
+                $user->guru->update([
+                    'nip' => $request->nip,
+                ]);
+            }
+
+            $user->siswa()?->delete();
+            $user->orangTua()?->delete();
+            break;
+
+        case 'orang_tua':
+            $request->validate([
+                'id_siswa' => 'required|exists:siswa,id',
+            ]);
+
+            if (!$user->orangTua) {
+                $user->orangTua()->create([
+                    'id_siswa' => $request->id_siswa,
+                ]);
+            } else {
+                $user->orangTua->update([
+                    'id_siswa' => $request->id_siswa,
+                ]);
+            }
+
+            $user->siswa()?->delete();
+            $user->guru()?->delete();
+            break;
+
+        default:
+            // Kalau admin, hapus semua relasi khusus
+            $user->siswa()?->delete();
+            $user->guru()?->delete();
+            $user->orangTua()?->delete();
+            break;
     }
 
     return redirect()->route('admin.kelola-pengguna')->with('success', 'Pengguna berhasil diperbarui.');
 }
+
 
 
     public function hapusPengguna($id)

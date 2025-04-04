@@ -35,10 +35,9 @@ class User extends Authenticatable
     }
 
     public function guru()
-{
-    return $this->hasOne(Guru::class, 'id_user');
-}
-
+    {
+        return $this->hasOne(Guru::class, 'id_user', 'id'); // atau sesuaikan foreign key-nya
+    }
 
     public function orangTua()
     {
