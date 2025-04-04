@@ -79,13 +79,15 @@ class AdminController extends Controller
     }
 
     public function showInputPerilakuForm($id_siswa)
-    {
-        $siswa = Siswa::findOrFail($id_siswa);
-        $kategoriPerilaku = KategoriPerilaku::orderBy('nama')->get();
-        return view('admin.input-perilaku', compact('siswa', 'kategoriPerilaku'));
-    }
+{
+    $siswa = Siswa::findOrFail($id_siswa);
+    $kategoriPerilaku = KategoriPerilaku::orderBy('nama')->get();
+    $gurus = User::where('role', 'guru')->get(); // Ambil semua guru
+    return view('admin.input-perilaku', compact('siswa', 'kategoriPerilaku', 'gurus'));
+}
 
-    public function storePerilaku(Request $request)
+
+public function storePerilaku(Request $request)
 {
     $validated = $request->validate([
         'id_siswa' => 'required|exists:siswa,id_siswa',
@@ -93,16 +95,20 @@ class AdminController extends Controller
         'tanggal' => 'required|date',
         'nilai' => 'required|integer|min:1|max:100',
         'komentar' => 'nullable|string',
+        'id_guru' => 'nullable|exists:users,id',
     ]);
 
     $kategori = KategoriPerilaku::findOrFail($validated['kategori_perilaku_id']);
     $siswa = Siswa::findOrFail($validated['id_siswa']);
 
+    // Jika tidak memilih guru, default ke admin
+    $id_guru = $validated['id_guru'] ?? auth()->id();
+
     // Simpan data perilaku
     Perilaku::create([
         'id_siswa' => $validated['id_siswa'],
         'id_admin' => auth()->id(),
-        'id_guru' => null,
+        'id_guru' => $id_guru, // Pakai guru yang dipilih, jika tidak default admin
         'kategori_perilaku_id' => $validated['kategori_perilaku_id'],
         'nilai' => $validated['nilai'],
         'tanggal' => $validated['tanggal'],
@@ -116,4 +122,5 @@ class AdminController extends Controller
     return redirect()->route('admin.daftar-siswa')
         ->with('success', 'Perilaku siswa berhasil dicatat. Poin berhasil diupdate.');
 }
+
 }

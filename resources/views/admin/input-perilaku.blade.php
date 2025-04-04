@@ -70,6 +70,20 @@
                             @enderror
                         </div>
 
+                        <!-- Pilihan Guru (Opsional) -->
+                        <div class="mb-4">
+                            <label for="id_guru" class="block text-sm font-medium text-gray-700">Pilih Guru (Opsional)</label>
+                            <select name="id_guru" id="id_guru"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="">Administrator (Default)</option>
+                                @foreach($gurus as $guru)
+                                    <option value="{{ $guru->id }}" {{ old('id_guru') == $guru->id ? 'selected' : '' }}>
+                                        {{ $guru->nama }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div class="mb-4">
                             <label for="komentar" class="block text-sm font-medium text-gray-700">Komentar (Opsional)</label>
                             <textarea name="komentar" id="komentar" rows="3"
@@ -99,8 +113,6 @@
                             <p class="text-sm">Poin setelah perubahan: <span id="poin-after" class="font-bold"></span></p>
                         </div>
 
-                        
-
                         <div class="flex justify-end space-x-3">
                             <a href="{{ route('admin.daftar-siswa') }}"
                                 class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-150">
@@ -116,43 +128,4 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Menampilkan preview perubahan poin
-        document.getElementById('kategori_perilaku_id').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const poinChange = parseInt(selectedOption.getAttribute('data-poin'));
-            const currentPoin = parseInt({
-                {
-                    $siswa - > poin
-                }
-            });
-            const newPoin = currentPoin + poinChange;
-
-            if (selectedOption.value) {
-                const poinPreview = document.getElementById('poin-preview');
-                document.getElementById('poin-change').textContent = (poinChange >= 0 ? '+' : '') + poinChange;
-                document.getElementById('poin-after').textContent = newPoin;
-
-                // Update warna berdasarkan perubahan
-                const changeElement = document.getElementById('poin-change');
-                const afterElement = document.getElementById('poin-after');
-
-                changeElement.className = poinChange >= 0 ? 'font-bold text-green-600' : 'font-bold text-red-600';
-                afterElement.className = newPoin >= 0 ? 'font-bold text-green-600' : 'font-bold text-red-600';
-
-                poinPreview.classList.remove('hidden');
-            } else {
-                document.getElementById('poin-preview').classList.add('hidden');
-            }
-        });
-
-        // Inisialisasi preview jika ada nilai yang sudah dipilih (ketika validasi error)
-        document.addEventListener('DOMContentLoaded', function() {
-            const selectElement = document.getElementById('kategori_perilaku_id');
-            if (selectElement.value) {
-                selectElement.dispatchEvent(new Event('change'));
-            }
-        });
-    </script>
 </x-app-layout>
