@@ -17,8 +17,14 @@ class OrangTua extends Model
         return $this->belongsTo(User::class, 'id_user');
     }
 
-    public function siswa()
+    public function siswas()
+    {
+        return $this->hasMany(Siswa::class, 'orang_tua_id', 'id_orangtua');
+    }
+    
+
+    /*public function siswa()
     {
         return $this->belongsTo(Siswa::class, 'id_siswa');
-    }
+    }*/
 }

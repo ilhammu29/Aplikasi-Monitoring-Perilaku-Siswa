@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('orang_tua', function (Blueprint $table) {
-            $table->id('id_orangtua');
+            $table->id(); // default-nya nama kolom = "id"
+
             $table->foreignId('id_user')->unique()->constrained('users');
             $table->foreignId('id_siswa')->unique()->constrained('siswa', 'id_siswa');
             $table->timestamps();

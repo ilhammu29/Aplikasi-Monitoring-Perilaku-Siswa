@@ -26,6 +26,9 @@
                     <x-nav-link :href="route('admin.daftar-siswa')" :active="request()->routeIs('admin.daftar-siswa')">
                         {{ __('Daftar Siswa') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('admin.form-tambah-orang-tua')" :active="request()->routeIs('admin.daftar-siswa')">
+                        {{ __('Daftar Siswa') }}
+                    </x-nav-link>
                     @elseif(auth()->user()->role === 'guru')
                     <x-nav-link :href="route('guru.dashboard')" :active="request()->routeIs('guru.dashboard')">
                         {{ __('Dashboard Guru') }}

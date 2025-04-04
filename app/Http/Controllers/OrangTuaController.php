@@ -17,40 +17,73 @@ class OrangTuaController extends Controller
 
     public function index()
     {
-        // Ambil data siswa yang terkait dengan orang tua
-        $siswa = auth()->user()->orangTua->siswa;
+        $orangTua = auth()->user()->orangTua;
+
+$siswa = $orangTua?->siswas?->first();
+
+if (!$siswa) {
+    return view('orangtua.semua-perilaku', [
+        'siswa' => null,
+        'semuaPerilaku' => collect([]), // ✅ Aman dan bisa pakai ->count()
+    ]);
+    
+}
+
+    
+     
+    
+        $siswas = $orangTua->siswas;
+
+        if (!$siswas || $siswas->isEmpty()) {
+            return view('orangtua.dashboard', [
+                'siswa' => null,
+                'perilakuTerbaru' => [],
+                'laporanPeriodik' => [],
+            ])->with('warning', 'Belum ada siswa yang terhubung.');
+        }
         
-        // Ambil 5 catatan perilaku terbaru
+    
+        $siswa = $siswas->first();
+    
         $perilakuTerbaru = Perilaku::with(['kategori', 'guru.user'])
             ->where('id_siswa', $siswa->id_siswa)
             ->orderBy('tanggal', 'desc')
             ->take(5)
             ->get();
-
-        // Ambil laporan periodik
+    
         $laporanPeriodik = LaporanPerilaku::where('id_siswa', $siswa->id_siswa)
             ->orderBy('periode', 'desc')
             ->get();
-
+    
         return view('orangtua.dashboard', [
             'siswa' => $siswa,
             'perilakuTerbaru' => $perilakuTerbaru,
             'laporanPeriodik' => $laporanPeriodik
         ]);
     }
+    
 
     public function semuaPerilaku()
-    {
-        $siswa = auth()->user()->orangTua->siswa;
-        
-        $semuaPerilaku = Perilaku::with(['kategori', 'guru.user'])
-            ->where('id_siswa', $siswa->id_siswa)
-            ->orderBy('tanggal', 'desc')
-            ->paginate(10);
+{
+    $orangTua = auth()->user()->orangTua;
+    $siswa = $orangTua?->siswas?->first();
 
+    if (!$siswa) {
         return view('orangtua.semua-perilaku', [
-            'siswa' => $siswa,
-            'semuaPerilaku' => $semuaPerilaku
-        ]);
+            'siswa' => null,
+            'semuaPerilaku' => collect(), // ✅ ganti dari array ke collection
+        ])->with('warning', 'Belum ada siswa yang terhubung.');
     }
+
+    $semuaPerilaku = Perilaku::with(['kategori', 'guru.user'])
+        ->where('id_siswa', $siswa->id_siswa)
+        ->orderBy('tanggal', 'desc')
+        ->paginate(10); // ini object paginator (punya method count)
+
+    return view('orangtua.semua-perilaku', [
+        'siswa' => $siswa,
+        'semuaPerilaku' => $semuaPerilaku
+    ]);
+}
+
 }

@@ -52,6 +52,9 @@ Route::prefix('admin')->middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/input-perilaku/{id_siswa}', [AdminController::class, 'showInputPerilakuForm'])->name('admin.show-input-perilaku');
     Route::post('/input-perilaku', [AdminController::class, 'storePerilaku'])->name('admin.store-perilaku');
     Route::delete('/pengguna/{id}', [AdminController::class, 'hapusPengguna'])->name('admin.hapus-pengguna');
+    Route::get('/admin/tambah-orang-tua', [AdminController::class, 'formTambahOrangTua'])->name('admin.form-tambah-orang-tua');
+Route::post('/admin/tambah-orang-tua', [AdminController::class, 'tambahOrangTua'])->name('admin.tambah-orang-tua');
+
 });
 
 

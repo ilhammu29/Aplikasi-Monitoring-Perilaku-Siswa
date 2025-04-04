@@ -16,58 +16,61 @@ class SiswaController extends Controller
 
     public function index()
     {
-        // Ambil data siswa yang sedang login dengan relasi yang diperlukan
         $siswa = auth()->user()->siswa;
-        
-        // Validasi jika data siswa tidak ditemukan
+
         if (!$siswa) {
             abort(403, 'Data siswa tidak ditemukan');
         }
 
-        // Ambil 5 catatan perilaku terbaru dengan relasi
-        $perilaku = Perilaku::with(['kategori', 'guru.user'])
+        $perilaku = Perilaku::with(['kategoriPerilaku', 'guru.user'])
             ->where('id_siswa', $siswa->id_siswa)
             ->latest()
             ->take(5)
             ->get();
 
-        // Ambil laporan perilaku
         $laporan = LaporanPerilaku::where('id_siswa', $siswa->id_siswa)
             ->latest()
             ->get();
 
-        // Kirim semua data ke view termasuk $siswa
         return view('siswa.dashboard', compact('siswa', 'perilaku', 'laporan'));
     }
 
     public function semuaPerilaku()
-{
-    $siswa = auth()->user()->siswa;
-    
-    $query = Perilaku::with(['kategori', 'guru.user'])
-        ->where('id_siswa', $siswa->id_siswa);
-    
-    // Sorting
-    switch(request('sort')) {
-        case 'terlama':
-            $query->oldest();
-            break;
-        case 'poin_tertinggi':
-            $query->join('kategori_perilaku', 'perilaku.kategori_perilaku_id', '=', 'kategori_perilaku.id')
-                ->orderBy('kategori_perilaku.poin', 'desc');
-            break;
-        case 'poin_terendah':
-            $query->join('kategori_perilaku', 'perilaku.kategori_perilaku_id', '=', 'kategori_perilaku.id')
-                ->orderBy('kategori_perilaku.poin', 'asc');
-            break;
-        default: // terbaru
-            $query->latest();
-    }
-    
-    $semuaPerilaku = $query->paginate(10);
+    {
+        $siswa = auth()->user()->siswa;
 
-    return view('siswa.semua-perilaku', compact('siswa', 'semuaPerilaku'));
-}
+        if (!$siswa) {
+            abort(403, 'Data siswa tidak ditemukan');
+        }
+
+        $query = Perilaku::with(['kategoriPerilaku', 'guru.user'])
+            ->where('id_siswa', $siswa->id_siswa);
+
+        switch (request('sort')) {
+            case 'terlama':
+                $query->oldest();
+                break;
+
+            case 'poin_tertinggi':
+                $query->with('kategoriPerilaku')
+                      ->get()
+                      ->sortByDesc(fn($item) => $item->kategoriPerilaku->poin ?? 0);
+                break;
+
+            case 'poin_terendah':
+                $query->with('kategoriPerilaku')
+                      ->get()
+                      ->sortBy(fn($item) => $item->kategoriPerilaku->poin ?? 0);
+                break;
+
+            default:
+                $query->latest();
+        }
+
+        $semuaPerilaku = $query->paginate(10);
+
+        return view('siswa.semua-perilaku', compact('siswa', 'semuaPerilaku'));
+    }
 
     public function beriKomentar(Request $request, $id_laporan)
     {
@@ -76,6 +79,11 @@ class SiswaController extends Controller
         ]);
 
         $laporan = LaporanPerilaku::findOrFail($id_laporan);
+
+        if ($laporan->id_siswa !== auth()->user()->siswa->id_siswa) {
+            abort(403, 'Anda tidak berhak mengomentari laporan ini.');
+        }
+
         $laporan->update(['komentar_siswa' => $request->komentar]);
 
         return back()->with('success', 'Komentar berhasil disimpan');

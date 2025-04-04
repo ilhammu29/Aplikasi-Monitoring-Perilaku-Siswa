@@ -11,8 +11,12 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <div class="flex justify-between items-center mb-6">
                         <div>
-                            <h3 class="text-lg font-medium">Catatan Perilaku {{ $siswa->user->nama }}</h3>
-                            <p class="text-sm text-gray-500">Total Poin: {{ $siswa->poin }}</p>
+                        <h3 class="text-lg font-medium">
+    Catatan Perilaku {{ $siswa?->user?->nama ?? 'Nama Siswa Tidak Diketahui' }}
+</h3>
+
+<p class="text-sm text-gray-500">Total Poin: {{ $siswa?->poin ?? 0 }}</p>
+
                         </div>
                         <a href="{{ route('orangtua.dashboard') }}" class="text-blue-500 hover:text-blue-700">
                             Kembali ke Dashboard
@@ -35,14 +39,16 @@
                                     @foreach($semuaPerilaku as $perilaku)
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap">{{ $perilaku->tanggal->format('d/m/Y') }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">{{ $perilaku->kategori->nama }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">{{ $perilaku->kategori->nama ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 py-1 text-xs rounded-full 
-                                                    {{ $perilaku->kategori->poin >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                    {{ $perilaku->kategori->poin >= 0 ? '+' : '' }}{{ $perilaku->kategori->poin }}
+                                                    {{ ($perilaku->kategori->poin ?? 0) >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                    {{ ($perilaku->kategori->poin >= 0 ? '+' : '') . ($perilaku->kategori->poin ?? 0) }}
                                                 </span>
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">{{ $perilaku->guru->user->nama ?? 'Admin' }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                {{ $perilaku->guru?->user?->nama ?? 'Admin' }}
+                                            </td>
                                             <td class="px-6 py-4">{{ $perilaku->komentar ?? '-' }}</td>
                                         </tr>
                                     @endforeach
