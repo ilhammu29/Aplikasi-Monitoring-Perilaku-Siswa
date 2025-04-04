@@ -12,3 +12,4 @@ class KategoriPerilaku extends Model
 
     protected $fillable = ['nama', 'poin', 'deskripsi'];
 }
+
