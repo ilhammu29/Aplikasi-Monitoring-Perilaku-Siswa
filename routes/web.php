@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\GuruController;
 use App\Http\Controllers\SiswaController;
 use App\Http\Controllers\OrangTuaController;
+use App\Http\Controllers\NotificationController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -84,3 +85,10 @@ Route::prefix('orangtua')->middleware(['auth', 'role:orang_tua'])->group(functio
 Route::get('/perilaku', [OrangTuaController::class, 'semuaPerilaku'])->name('orangtua.semua-perilaku');
 
 require __DIR__.'/auth.php';
+
+
+Route::middleware(['auth'])->group(function() {
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
+    Route::post('/notifications/{notification}/mark-read', [NotificationController::class, 'markRead'])->name('notifications.mark-read');
+});

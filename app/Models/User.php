@@ -43,4 +43,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(OrangTua::class, 'id_user');
     }
+
+    public function notifications()
+{
+    return $this->hasMany(Notification::class);
+}
 }

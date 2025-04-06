@@ -3,48 +3,43 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+use App\Models\Notification;  // Untuk Laravel 8+
 class PerilakuBaruDitambahkan implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    /**
-     * Data perilaku yang akan dikirim ke frontend
-     *
-     * @var array
-     */
-    public array $data;
+    public $notification;
 
-    /**
-     * Create a new event instance.
-     *
-     * @param array $data
-     */
-    public function __construct(array $data)
+    public function __construct($notification)
     {
-        $this->data = $data;
+        $this->notification = $notification;
     }
 
-    /**
-     * Saluran tempat event akan dipancarkan
-     *
-     * @return \Illuminate\Broadcasting\Channel
-     */
-    public function broadcastOn(): Channel
-    {
-        return new Channel('perilaku-channel');
+    public function broadcastOn()
+{
+    // Simpan notifikasi ke database
+    if ($this->notification['orangtua_id']) {
+        Notification::create([
+            'user_id' => $this->notification['orangtua_id'],
+            'type' => 'App\Notifications\PerilakuBaruNotification',
+            'notifiable_type' => 'App\Models\Siswa',
+            'notifiable_id' => $this->notification['siswa_id'],
+            'data' => json_encode($this->notification),
+        ]);
     }
 
-    /**
-     * Nama event yang akan dikirim ke frontend
-     *
-     * @return string
-     */
-    public function broadcastAs(): string
+    // Kirim ke channel siswa dan orang tua terkait
+    return [
+        new Channel('siswa.notifications.' . $this->notification['siswa_id']),
+        new Channel('orangtua.notifications.' . $this->notification['orangtua_id']),
+    ];
+}
+
+    public function broadcastAs()
     {
         return 'perilaku-baru';
     }

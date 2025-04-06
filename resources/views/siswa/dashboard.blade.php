@@ -18,10 +18,10 @@
                         <div>
                             <h3 class="text-lg font-medium">Informasi Siswa</h3>
                             <p class="text-sm text-gray-500 mt-1">Total Poin: 
-                                <span class="font-bold {{ $siswa->poin >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                    {{ $siswa->poin }}
-                                </span>
-                            </p>
+    <span id="total-poin" class="font-bold {{ $siswa->poin >= 0 ? 'text-green-600' : 'text-red-600' }}">
+        {{ $siswa->poin }}
+    </span>
+</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>

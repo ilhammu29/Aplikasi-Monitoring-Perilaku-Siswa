@@ -71,7 +71,7 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', 'Pengguna berhasil ditambahkan.');
         event(new \App\Events\PenggunaBaruDitambahkan($user->nama, $user->role));
-        
+
     }
 
 
@@ -202,33 +202,76 @@ class AdminController extends Controller
     }
 
     public function storePerilaku(Request $request)
-    {
-        $validated = $request->validate([
-            'id_siswa' => 'required|exists:siswa,id_siswa',
-            'kategori_perilaku_id' => 'required|exists:kategori_perilaku,id',
-            'tanggal' => 'required|date',
-            'nilai' => 'required|integer|min:1|max:100',
-            'komentar' => 'nullable|string',
-            'id_guru' => 'nullable|exists:users,id',
-        ]);
+{
+    $validated = $request->validate([
+        'id_siswa' => 'required|exists:siswa,id_siswa',
+        'kategori_perilaku_id' => 'required|exists:kategori_perilaku,id',
+        'tanggal' => 'required|date',
+        'nilai' => 'required|integer|min:1|max:100',
+        'komentar' => 'nullable|string',
+        'id_guru' => 'nullable|exists:guru,id_guru',
+    ]);
 
+    DB::beginTransaction();
+
+    try {
         $kategori = KategoriPerilaku::findOrFail($validated['kategori_perilaku_id']);
         $siswa = Siswa::findOrFail($validated['id_siswa']);
+        $guru = $validated['id_guru'] ? Guru::findOrFail($validated['id_guru']) : null;
 
-        Perilaku::create([
+        $perilaku = Perilaku::create([
             'id_siswa' => $validated['id_siswa'],
-            'id_admin' => auth()->id(),
-            'id_guru' => $validated['id_guru'] ?? auth()->id(),
+            'id_guru' => $guru ? $guru->id_guru : null,
             'kategori_perilaku_id' => $validated['kategori_perilaku_id'],
             'nilai' => $validated['nilai'],
             'tanggal' => $validated['tanggal'],
             'komentar' => $validated['komentar'],
         ]);
 
+        // Update poin siswa
         $siswa->increment('poin', $kategori->poin);
 
-        return redirect()->route('admin.daftar-siswa')->with('success', 'Perilaku siswa berhasil dicatat dan poin berhasil diperbarui.');
+        // Cari orang tua siswa
+        $orangTua = User::whereHas('siswa', function($query) use ($siswa) {
+            $query->where('id_siswa', $siswa->id_siswa);
+        })->first();
+
+        // Data notifikasi
+        $notificationData = [
+            'siswa_id' => $siswa->id_siswa,
+            'siswa_nama' => $siswa->user->nama,
+            'kelas' => $siswa->kelas,
+            'jurusan' => $siswa->jurusan,
+            'perilaku_kategori' => $kategori->nama,
+            'poin_kategori' => $kategori->poin,
+            'nilai' => $validated['nilai'],
+            'guru_nama' => $guru ? $guru->user->nama : 'Admin',
+            'tanggal' => $validated['tanggal'],
+            'komentar' => $validated['komentar'] ?? '-',
+            'total_poin' => $siswa->poin,
+            'orangtua_id' => $orangTua ? $orangTua->id : null,
+            'action_url' => [
+                'siswa' => route('siswa.semua-perilaku'),
+                'orangtua' => route('orangtua.semua-perilaku'),
+            ]
+        ];
+
+        event(new PerilakuBaruDitambahkan($notificationData));
+
+        DB::commit();
+
+        return redirect()
+            ->route('admin.daftar-siswa')
+            ->with('success', 'Perilaku siswa berhasil dicatat dan notifikasi telah dikirim.');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Gagal menyimpan perilaku: ' . $e->getMessage());
+
+        return back()
+            ->withInput()
+            ->with('error', 'Gagal menyimpan data perilaku: ' . $e->getMessage());
     }
+}
 
     public function formTambahOrangTua()
     {

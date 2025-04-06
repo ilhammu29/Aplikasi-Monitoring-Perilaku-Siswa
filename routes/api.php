@@ -17,3 +17,19 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::middleware('auth:sanctum')->group(function() {
+    Route::get('/notifications', function() {
+        return auth()->user()->notifications()
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+    });
+
+    Route::post('/notifications/{notification}/read', function($notificationId) {
+        $notification = auth()->user()->notifications()->findOrFail($notificationId);
+        $notification->markAsRead();
+        
+        return response()->json(['status' => 'success']);
+    });
+});
