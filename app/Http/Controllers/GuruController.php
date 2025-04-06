@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-
+use App\Events\PerilakuBaruDitambahkan;
+use App\Notifications\NotifikasiPerilakuBaru;
 class GuruController extends Controller
 {
     public function __construct()
@@ -38,59 +39,76 @@ class GuruController extends Controller
     }
 
     public function storePerilaku(Request $request)
-{
-    $validated = $request->validate([
-        'id_siswa' => 'required|exists:siswa,id_siswa',
-        'kategori_perilaku_id' => 'required|exists:kategori_perilaku,id',
-        'tanggal' => 'required|date',
-        'nilai' => 'required|integer|min:1|max:100',
-        'komentar' => 'nullable|string|max:500',
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-        // Dapatkan user yang login
-        $user = Auth::user();
-        
-        // Cari data guru berdasarkan user_id
-        $guru = Guru::where('id_user', $user->id)->first();
-
-        if (!$guru) {
-            // Jika guru tidak ditemukan, buat record baru (opsional)
-            // Atau cukup return error
-            throw new \Exception('Data guru tidak ditemukan. Silahkan lengkapi profil guru terlebih dahulu.');
-        }
-
-        $kategori = KategoriPerilaku::findOrFail($validated['kategori_perilaku_id']);
-        $siswa = Siswa::findOrFail($validated['id_siswa']);
-
-        Perilaku::create([
-            'id_siswa' => $siswa->id_siswa,
-            'id_guru' => $guru->id_guru,
-            'kategori_perilaku_id' => $kategori->id,
-            'tanggal' => $validated['tanggal'],
-            'nilai' => $validated['nilai'],
-            'komentar' => $validated['komentar'] ?? null,
+    {
+        $validated = $request->validate([
+            'id_siswa' => 'required|exists:siswa,id_siswa',
+            'kategori_perilaku_id' => 'required|exists:kategori_perilaku,id',
+            'tanggal' => 'required|date',
+            'nilai' => 'required|integer|min:1|max:100',
+            'komentar' => 'nullable|string|max:500',
         ]);
 
-        $siswa->increment('poin', $kategori->poin);
+        DB::beginTransaction();
 
-        DB::commit();
+        try {
+            // Dapatkan user yang login
+            $user = Auth::user();
 
-        return redirect()
-            ->route('guru.daftar-siswa')
-            ->with('success', 'Perilaku siswa berhasil dicatat dan poin berhasil diupdate.');
+            // Cari data guru berdasarkan user_id
+            $guru = Guru::where('id_user', $user->id)->first();
 
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Gagal menyimpan perilaku: ' . $e->getMessage());
+            if (!$guru) {
+                // Jika guru tidak ditemukan, buat record baru (opsional)
+                // Atau cukup return error
+                throw new \Exception('Data guru tidak ditemukan. Silahkan lengkapi profil guru terlebih dahulu.');
+            }
 
-        return back()
-            ->withInput()
-            ->with('error', $e->getMessage());
-    }
+            $kategori = KategoriPerilaku::findOrFail($validated['kategori_perilaku_id']);
+            $siswa = Siswa::findOrFail($validated['id_siswa']);
+
+            Perilaku::create([
+                'id_siswa' => $siswa->id_siswa,
+                'id_guru' => $guru->id_guru,
+                'kategori_perilaku_id' => $kategori->id,
+                'tanggal' => $validated['tanggal'],
+                'nilai' => $validated['nilai'],
+                'komentar' => $validated['komentar'] ?? null,
+            ]);
+
+            // Siarkan event
+event(new PerilakuBaruDitambahkan([
+    'nama_guru' => $guru->nama,
+    'kategori' => $kategori->nama,
+    'nilai' => $validated['nilai'],
+    'id_siswa' => $siswa->id_siswa,
+    'tanggal' => $validated['tanggal'],
+]));
+
+// Kirim notifikasi ke siswa
+if ($siswa->user) {
+    $siswa->user->notify(new NotifikasiPerilakuBaru([
+        'nama_guru' => $guru->nama,
+        'kategori' => $kategori->nama,
+        'nilai' => $validated['nilai'],
+        'tanggal' => $validated['tanggal'],
+    ]));
 }
+
+   
+            DB::commit();
+
+            return redirect()
+                ->route('guru.daftar-siswa')
+                ->with('success', 'Perilaku siswa berhasil dicatat dan poin berhasil diupdate.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Gagal menyimpan perilaku: ' . $e->getMessage());
+
+            return back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
+    }
 
     public function lihatOrangTua($id_siswa)
     {
